@@ -15,7 +15,8 @@ namespace CommEnv
         [SerializeField] private Vector3 startingPos;
 
         private int _numOfConnections = 0;
-
+        const double TOLERANCE = 0.1;
+        
         protected override void Awake()
         {
             base.Awake();
@@ -72,7 +73,7 @@ namespace CommEnv
         {
             base.WriteDiscreteActionMask(actionMask);
 
-            const double TOLERANCE = 0.1;
+           
             
             if (Math.Abs(this.transform.position.x - 9) < TOLERANCE)
             {
@@ -99,44 +100,49 @@ namespace CommEnv
         {
             var action = actions.DiscreteActions[0];
 
-            PerformAction(action);
+            var isActionValid = ValidateAction(action);
+            
+            if(isActionValid)
+                PerformAction(action);
             
             ComputeReward();
             
-            const double TOLERANCE = 0.1;
             if (AreBaseStationsConnected())
             {
                 GameManager.Instance.Reset();
             }            
             
-            if (AreBaseStationsConnected())
-            {
-                GameManager.Instance.Reset();
-            }
-            
-            if (Math.Abs(this.transform.position.x - 9) < TOLERANCE)
-            {
-                GameManager.Instance.Reset();
-            }            
-            
-            if (Math.Abs(this.transform.position.x - (-9)) < TOLERANCE)
-            {
-                GameManager.Instance.Reset();
-            }            
-            
-            if (Math.Abs(this.transform.position.z - (-9)) < TOLERANCE)
-            {
-                GameManager.Instance.Reset();
-            }            
-            
-            if (Math.Abs(this.transform.position.z - 9) < TOLERANCE)
-            {
-                GameManager.Instance.Reset();
-            }
-
         }
 
-        
+        private bool ValidateAction(int action)
+        {
+            var expectedPosition = this.transform.position;
+            switch (action)
+            {
+                case (int)Key.k_noAction:
+                    AddReward(-0.1f);
+                    break;
+                case (int)Key.k_up:
+                    expectedPosition += new Vector3(1, 0, 0);
+                    break;
+                case (int)Key.k_down:
+                    expectedPosition += new Vector3(-1, 0, 0);
+                    break;
+                case (int)Key.k_left:
+                    expectedPosition += new Vector3(0, 0, -1);
+                    break;
+                case (int)Key.k_right:
+                    expectedPosition += new Vector3(0, 0, 1);
+                    break;
+            }
+            
+            if(expectedPosition.x < -9 || expectedPosition.x > 9 || expectedPosition.z < -9 || expectedPosition.z > 9)
+                return false;
+            
+            return true;
+        }
+
+
         // perform action
         // 0 - dont move
         // 1 - move up
@@ -174,7 +180,7 @@ namespace CommEnv
             var totalReward = _numOfConnections * 5 + (AreBaseStationsConnected() ? 100 : 0);
             if(transform.name == "Drone1" && oldReward != totalReward)
                 Debug.Log("Total reward: " + totalReward);
-            AddReward(totalReward);
+            SetReward(totalReward);
         }
 
         private bool AreBaseStationsConnected()
