@@ -62,13 +62,9 @@ class DronesUnityParallelEnv(BaseEnv):
 
         decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
 
-        self.unityEnv.step()
-
-        decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
-
         # Get the observations, rewards, dones and infos
-        observations = decision_steps.obs
-        rewards = decision_steps.reward
+        observations = terminal_steps.obs
+        rewards = terminal_steps.reward
         dones = terminal_steps.interrupted
         infos = {}
 
@@ -98,7 +94,20 @@ class DronesUnityParallelEnv(BaseEnv):
 
         return action_space
 
-    def get_action_mask(self, agent_id, has_step=False):
+    """
+    This method is used to retrieve the observation space for each agent. We consider that each agent has the same
+    observation space. Therefore, we just return the observation space of the first agent.
+    """
+    def get_observation_specs(self):
+        # We assume we will have just one behavior. This may be wrong in the future
+        behavior_name = self.behavior_names[0]
+
+        # Get the observation space
+        observation_space = self.unityEnv.behavior_specs[behavior_name].observation_specs
+
+        return observation_space
+
+    def get_action_mask(self, agent_id):
 
         # We assume we will have just one behavior. This may be wrong in the future
         behavior_name = self.behavior_names[0]
@@ -130,3 +139,7 @@ class DronesUnityParallelEnv(BaseEnv):
         else:
             # If the random action is out of bounds, it's not allowed
             return False
+
+    """ This methods allows to retrieve an agent observation space"""
+    def get_agent_observation_space(self):
+        return self.unityEnv.
