@@ -1,5 +1,5 @@
 import numpy as np
-from gymnasium.spaces import Discrete
+from gymnasium.spaces import Discrete, Box
 from mlagents_envs.base_env import ActionTuple
 from mlagents_envs.environment import UnityEnvironment
 
@@ -26,7 +26,6 @@ class DronesUnityParallelEnv(BaseEnv):
         self.unityEnv.reset()
         # Get the brain name
         self.behavior_names = list(self.unityEnv.behavior_specs.keys())
-
 
     """
     This method is used to step in the environment. 
@@ -62,6 +61,28 @@ class DronesUnityParallelEnv(BaseEnv):
 
         decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
 
+        # This means that the episode is finished
+        if len(terminal_steps.obs[0]) > 0:
+            observations = terminal_steps.obs
+            rewards = terminal_steps.reward
+            dones = terminal_steps.interrupted
+            infos = {}
+
+        else:
+            observations = decision_steps.obs
+            rewards = decision_steps.reward
+            dones = [False for _ in range(self.get_num_of_agents())]
+            infos = {}
+
+        return observations, rewards, dones, infos
+
+    def get_last_step(self):
+
+        # We assume we will have just one behavior. This may be wrong in the future
+        behavior_name = self.behavior_names[0]
+
+        decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
+
         # Get the observations, rewards, dones and infos
         observations = terminal_steps.obs
         rewards = terminal_steps.reward
@@ -73,6 +94,19 @@ class DronesUnityParallelEnv(BaseEnv):
     def reset(self):
         # Reset the environment
         self.unityEnv.reset()
+        # We assume we will have just one behavior. This may be wrong in the future
+        behavior_name = self.behavior_names[0]
+
+        decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
+
+        # Get the observations, rewards, dones and infos
+        observations = decision_steps.obs
+        rewards = decision_steps.reward
+        dones = terminal_steps.interrupted
+        infos = {}
+
+        return observations, rewards, dones, infos
+
 
     def close(self):
         self.unityEnv.close()
@@ -81,6 +115,7 @@ class DronesUnityParallelEnv(BaseEnv):
     This method is used to retrieve the action for each agent. We consider that each agent has the same action sapce. 
     Therefore, we just return the action space of the first agent.
     """
+
     def get_action_space(self):
         # We assume we will have just one behavior. This may be wrong in the future
         behavior_name = self.behavior_names[0]
@@ -98,6 +133,7 @@ class DronesUnityParallelEnv(BaseEnv):
     This method is used to retrieve the observation space for each agent. We consider that each agent has the same
     observation space. Therefore, we just return the observation space of the first agent.
     """
+
     def get_observation_specs(self):
         # We assume we will have just one behavior. This may be wrong in the future
         behavior_name = self.behavior_names[0]
@@ -116,7 +152,7 @@ class DronesUnityParallelEnv(BaseEnv):
 
         return action_mask
 
-    """ This methods allow to retrive the number of agents in the environment. """
+    """ This methods allow to retrieve the number of agents in the environment. """
 
     def get_num_of_agents(self):
         # We assume we will have just one behavior. This may be wrong in the future
@@ -141,5 +177,19 @@ class DronesUnityParallelEnv(BaseEnv):
             return False
 
     """ This methods allows to retrieve an agent observation space"""
-    def get_agent_observation_space(self):
-        return self.unityEnv.
+
+    def get_observation_space(self):
+        # We assume we will have just one behavior. This may be wrong in the future
+        behavior_name = self.behavior_names[0]
+
+        # Get the observation space
+        observation_space = self.unityEnv.behavior_specs[behavior_name].observation_specs
+
+        observation_space = Box(
+            low=-np.float32(np.inf),
+            high=np.float32(np.inf),
+            shape=observation_space[0].shape,
+            dtype=np.float32,
+            )
+
+        return observation_space

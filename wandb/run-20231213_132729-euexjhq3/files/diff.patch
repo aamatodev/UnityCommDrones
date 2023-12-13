@@ -1,0 +1,397 @@
+diff --git a/python/comm_drones_runner.py b/python/comm_drones_runner.py
+index b55f0e7..3eb07b9 100644
+--- a/python/comm_drones_runner.py
++++ b/python/comm_drones_runner.py
+@@ -14,6 +14,10 @@ from python.utils.args import Args
+ if __name__ == "__main__":
+     args = tyro.cli(Args)
+ 
++    args.run_name = "dqn_comm_drones"
++    args.exp_name = "dqn_comm_drones"
++    args.wandb_project_name = "commAgents"
++
+     ##
+     # Create the environment -
+     #   -   Port 5004 is used for communication with the unity editor
+diff --git a/python/env/__pycache__/unity_env.cpython-310.pyc b/python/env/__pycache__/unity_env.cpython-310.pyc
+index 2980299..18dc75c 100644
+Binary files a/python/env/__pycache__/unity_env.cpython-310.pyc and b/python/env/__pycache__/unity_env.cpython-310.pyc differ
+diff --git a/python/env/unity_env.py b/python/env/unity_env.py
+index 301d574..b7374e4 100644
+--- a/python/env/unity_env.py
++++ b/python/env/unity_env.py
+@@ -1,5 +1,5 @@
+ import numpy as np
+-from gymnasium.spaces import Discrete
++from gymnasium.spaces import Discrete, Box
+ from mlagents_envs.base_env import ActionTuple
+ from mlagents_envs.environment import UnityEnvironment
+ 
+@@ -27,7 +27,6 @@ class DronesUnityParallelEnv(BaseEnv):
+         # Get the brain name
+         self.behavior_names = list(self.unityEnv.behavior_specs.keys())
+ 
+-
+     """
+     This method is used to step in the environment. 
+     It receives an action for each agent and returns the observations, rewards, dones and infos
+@@ -62,6 +61,28 @@ class DronesUnityParallelEnv(BaseEnv):
+ 
+         decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
+ 
++        # This means that the episode is finished
++        if len(terminal_steps.obs[0]) > 0:
++            observations = terminal_steps.obs
++            rewards = terminal_steps.reward
++            dones = terminal_steps.interrupted
++            infos = {}
++
++        else:
++            observations = decision_steps.obs
++            rewards = decision_steps.reward
++            dones = [False for _ in range(self.get_num_of_agents())]
++            infos = {}
++
++        return observations, rewards, dones, infos
++
++    def get_last_step(self):
++
++        # We assume we will have just one behavior. This may be wrong in the future
++        behavior_name = self.behavior_names[0]
++
++        decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
++
+         # Get the observations, rewards, dones and infos
+         observations = terminal_steps.obs
+         rewards = terminal_steps.reward
+@@ -73,6 +94,19 @@ class DronesUnityParallelEnv(BaseEnv):
+     def reset(self):
+         # Reset the environment
+         self.unityEnv.reset()
++        # We assume we will have just one behavior. This may be wrong in the future
++        behavior_name = self.behavior_names[0]
++
++        decision_steps, terminal_steps = self.unityEnv.get_steps(behavior_name)
++
++        # Get the observations, rewards, dones and infos
++        observations = decision_steps.obs
++        rewards = decision_steps.reward
++        dones = terminal_steps.interrupted
++        infos = {}
++
++        return observations, rewards, dones, infos
++
+ 
+     def close(self):
+         self.unityEnv.close()
+@@ -81,6 +115,7 @@ class DronesUnityParallelEnv(BaseEnv):
+     This method is used to retrieve the action for each agent. We consider that each agent has the same action sapce. 
+     Therefore, we just return the action space of the first agent.
+     """
++
+     def get_action_space(self):
+         # We assume we will have just one behavior. This may be wrong in the future
+         behavior_name = self.behavior_names[0]
+@@ -98,6 +133,7 @@ class DronesUnityParallelEnv(BaseEnv):
+     This method is used to retrieve the observation space for each agent. We consider that each agent has the same
+     observation space. Therefore, we just return the observation space of the first agent.
+     """
++
+     def get_observation_specs(self):
+         # We assume we will have just one behavior. This may be wrong in the future
+         behavior_name = self.behavior_names[0]
+@@ -116,7 +152,7 @@ class DronesUnityParallelEnv(BaseEnv):
+ 
+         return action_mask
+ 
+-    """ This methods allow to retrive the number of agents in the environment. """
++    """ This methods allow to retrieve the number of agents in the environment. """
+ 
+     def get_num_of_agents(self):
+         # We assume we will have just one behavior. This may be wrong in the future
+@@ -141,5 +177,19 @@ class DronesUnityParallelEnv(BaseEnv):
+             return False
+ 
+     """ This methods allows to retrieve an agent observation space"""
+-    def get_agent_observation_space(self):
+-        return self.unityEnv.
++
++    def get_observation_space(self):
++        # We assume we will have just one behavior. This may be wrong in the future
++        behavior_name = self.behavior_names[0]
++
++        # Get the observation space
++        observation_space = self.unityEnv.behavior_specs[behavior_name].observation_specs
++
++        observation_space = Box(
++            low=-np.float32(np.inf),
++            high=np.float32(np.inf),
++            shape=observation_space[0].shape,
++            dtype=np.float32,
++            )
++
++        return observation_space
+diff --git a/python/scripts/__pycache__/dqn_comm_drones.cpython-310.pyc b/python/scripts/__pycache__/dqn_comm_drones.cpython-310.pyc
+index d2d70d6..ac98523 100644
+Binary files a/python/scripts/__pycache__/dqn_comm_drones.cpython-310.pyc and b/python/scripts/__pycache__/dqn_comm_drones.cpython-310.pyc differ
+diff --git a/python/scripts/dqn_comm_drones.py b/python/scripts/dqn_comm_drones.py
+index 79bacf1..463453f 100644
+--- a/python/scripts/dqn_comm_drones.py
++++ b/python/scripts/dqn_comm_drones.py
+@@ -8,8 +8,11 @@ from torch import nn, optim
+ from cleanrl_utils.buffers import ReplayBuffer
+ from python.env.unity_env import DronesUnityParallelEnv
+ from python.utils.args import Args
++from python.utils.logger import Logger
+ from python.utils.utlis import Utils
+ 
++import torch.nn.functional as F
++
+ 
+ class QNetwork(nn.Module):
+     def __init__(self, observation_space, action_space: int):
+@@ -35,6 +38,9 @@ class DronesDQN:
+         self.args = args
+         self.log_to_wandb = log_to_wandb
+ 
++        if self.log_to_wandb:
++            self.logger = Logger(args)
++
+     def train(self):
+         if self.device is None:
+             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+@@ -78,7 +84,7 @@ class DronesDQN:
+                 )
+             )
+ 
+-        self.env.reset()
++        obs, rewards, dones, infos = self.env.reset()
+ 
+         for global_steps in range(self.args.total_timesteps):
+ 
+@@ -88,32 +94,66 @@ class DronesDQN:
+             actions = []
+             for agent_id in range(self.num_agents):
+                 if np.random.random() < epsilon:
+-                    action = np.array(
+-                        [self.env.get_action_space().sample() for _ in range(self.env.get_num_of_agents())])
++                    action = self.env.get_action_space().sample()
+                 else:
+-                    q_values = policies["policies"][0](torch.Tensor(self.env.get_observation_space()).to(self.device))
+-                    action = torch.argmax(q_values, dim=1).cpu().numpy()
++                    q_values = policies["policies"][agent_id](torch.Tensor(obs[0][agent_id]).to(self.device))
++                    action = torch.argmax(q_values).cpu().numpy()
+                 actions.append([action])
+ 
+             # TRY NOT TO MODIFY: execute the game and log data.
+-            obs, rewards, dones, infos = self.env.step(actions)
++            next_obs, rewards, dones, infos = self.env.step(actions)
+ 
+             for idx in range(self.num_agents):
+-                replay_buffers["replay_buffer"][idx].add(obs=self.env.get_observation_space()[idx],
+-                                                         next_obs=obs[idx], action=actions[idx],
++                replay_buffers["replay_buffer"][idx].add(obs=obs[0][idx],
++                                                         next_obs=next_obs[0][idx], action=actions[idx],
+                                                          reward=rewards[idx], done=dones[idx])
+-
+-                if replay_buffers["replay_buffer"][idx].is_full():
+-                    # Training the network
+-                    obs, next_obs, actions, rewards, dones = replay_buffers["replay_buffer"][idx].sample(
+-                        self.args.batch_size)
+-
+-                    q_values = policies["policies"][idx](obs).gather(1, actions.unsqueeze(1)).squeeze(1)
+-                    next_q_values = policies["target_network"][idx](next_obs).max(1)[0]
+-                    expected_q_values = rewards + (self.args.gamma * next_q_values * (1 - dones))
+-
+-                    loss = nn.MSELoss()(q_values, expected_q_values)
+-
+-                    policies["optimizers"][idx].zero_grad()
+-                    loss.backward()
+-                    policies["optimizers"][idx].step()
++            obs = next_obs
++
++            # ALGO LOGIC: training.
++            if global_steps > 100:
++                if global_steps % self.args.train_frequency == 0:
++
++                    for idx in range(self.num_agents):
++                        data = replay_buffers["replay_buffer"][idx].sample(self.args.batch_size)
++                        with (torch.no_grad()):
++                            target_max, _ = policies["target_network"][idx](
++                                data.next_observations
++                            ).max(dim=1)
++
++                            td_target = data.rewards.flatten() + self.args.gamma * target_max * (1 - data.dones.flatten())
++
++                        old_val = policies["policies"][idx](
++                            data.observations
++                        ).gather(1, data.actions).squeeze()
++
++                        loss = F.mse_loss(td_target, old_val)
++
++                        if self.log_to_wandb:
++                            if global_steps % 100 == 0:
++                                self.logger.log(f"charts/agent-{idx}/loss", loss, global_steps)
++                                self.logger.log(f"charts/agent-{idx}/epsilon", epsilon, global_steps)
++                                self.logger.log(f"charts/agent-{idx}/rewards", rewards[idx], global_steps)
++
++
++                        # optimize the model
++                        policies["optimizers"][idx].zero_grad()
++                        loss.backward()
++                        policies["optimizers"][idx].step()
++
++                        # update target network
++                        if global_steps % self.args.target_network_frequency == 0:
++                            for target_network_param, q_network_param in zip(
++                                    policies["target_network"][idx].
++                                            parameters(),
++                                    policies["policies"][idx].
++                                            parameters()):
++                                target_network_param.data.copy_(
++                                    self.args.tau * q_network_param.data + (1.0 - self.args.tau) * target_network_param.data
++                                )
++
++        # save the model
++        if self.args.save_model:
++            for a in range(self.env.get_num_of_agents()):
++                model_path = f"runs/{self.args.run_name}/{self.args.exp_name}-{a}.cleanrl_model"
++                torch.save(policies["policies"][a].state_dict(), model_path)
++                print(f"model saved to {model_path}")
+\ No newline at end of file
+diff --git a/python/utils/logger.py b/python/utils/logger.py
+new file mode 100644
+index 0000000..8801ec9
+--- /dev/null
++++ b/python/utils/logger.py
+@@ -0,0 +1,33 @@
++"""
++
++This class provides the basics for logging the environment information into wandb.
++
++"""
++from torch.utils.tensorboard import SummaryWriter
++
++from python.utils.args import Args
++import logging
++import wandb
++
++class Logger:
++    def __init__(self, args: Args):
++
++        wandb.init(
++            project=args.wandb_project_name,
++            sync_tensorboard=True,
++            config=vars(args),
++            name=args.run_name,
++            monitor_gym=True,
++            save_code=True,
++        )
++
++        # Set up the writer
++        self.writer = SummaryWriter(f"runs/{args.run_name}")
++
++        self.writer.add_text(
++            "hyperparameters",
++            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
++        )
++    def log(self, name, value, step):
++        self.writer.add_scalar(name, value, step)
++        logging.info(f"{name}: {value} at step {step}")
+diff --git a/sample-unity-project/Assets/ML-Agents/Timers/Connect2Points_timers.json b/sample-unity-project/Assets/ML-Agents/Timers/Connect2Points_timers.json
+index 10c0810..7fa5577 100644
+--- a/sample-unity-project/Assets/ML-Agents/Timers/Connect2Points_timers.json
++++ b/sample-unity-project/Assets/ML-Agents/Timers/Connect2Points_timers.json
+@@ -1 +1 @@
+-{"count":1,"self":1.766999,"total":42.824438,"children":{"InitializeActuators":{"count":3,"self":0.0018269999999999998,"total":0.0018269999999999998,"children":null},"InitializeSensors":{"count":3,"self":0.0013679999999999999,"total":0.0013679999999999999,"children":null},"AgentSendState":{"count":2,"self":0.0014789999999999998,"total":0.018021,"children":{"CollectObservations":{"count":6,"self":0.001241,"total":0.001241,"children":null},"WriteActionMask":{"count":6,"self":0.000745,"total":0.000745,"children":null},"RequestDecision":{"count":6,"self":0.008619,"total":0.014556,"children":{"AgentInfo.ToProto":{"count":6,"self":0.001705,"total":0.005937,"children":{"GenerateSensorData":{"count":6,"self":0.004232,"total":0.004232,"children":null}}}}}}},"DecideAction":{"count":2,"self":41.032838399999996,"total":41.032838,"children":null},"AgentAct":{"count":2,"self":0.00275,"total":0.00275,"children":null}},"gauges":{},"metadata":{"timer_format_version":"0.1.0","start_time_seconds":"1702427754","unity_version":"2022.3.13f1","command_line_arguments":"\/home\/aamato\/Unity\/Hub\/Editor\/2022.3.13f1\/Editor\/Unity -projectpath \/home\/aamato\/Documents\/MARL\/UnityPetZoo\/sample-unity-project -useHub -hubIPC -cloudEnvironment production","communication_protocol_version":"1.5.0","com.unity.ml-agents_version":"3.0.0-exp.1","scene_name":"Connect2Points","end_time_seconds":"1702427797"}}
+\ No newline at end of file
++{"count":1,"self":232.2797056,"total":468.747217,"children":{"InitializeActuators":{"count":3,"self":0.001691,"total":0.001691,"children":null},"InitializeSensors":{"count":3,"self":0.00105,"total":0.00105,"children":null},"AgentSendState":{"count":12008,"self":0.136578,"total":0.403696,"children":{"CollectObservations":{"count":7212,"self":0.058546,"total":0.058546,"children":null},"WriteActionMask":{"count":7212,"self":0.03009,"total":0.03009,"children":null},"RequestDecision":{"count":7212,"self":0.060744,"total":0.178482,"children":{"AgentInfo.ToProto":{"count":7212,"self":0.048701999999999995,"total":0.117738,"children":{"GenerateSensorData":{"count":7212,"self":0.069036,"total":0.069036,"children":null}}}}}}},"DecideAction":{"count":12008,"self":229.0230784,"total":229.023068,"children":null},"AgentAct":{"count":12008,"self":7.031192,"total":7.037971,"children":{"AgentInfo.ToProto":{"count":360,"self":0.00325,"total":0.0067789999999999994,"children":{"GenerateSensorData":{"count":360,"self":0.003529,"total":0.003529,"children":null}}}}}},"gauges":{"CommDrone.CumulativeReward":{"count":360,"max":368.999756,"min":-481.000061,"runningAverage":-17.617239,"value":127.000015,"weightedAverage":-4.14620972}},"metadata":{"timer_format_version":"0.1.0","start_time_seconds":"1702495175","unity_version":"2022.3.13f1","command_line_arguments":"\/home\/aamato\/Unity\/Hub\/Editor\/2022.3.13f1\/Editor\/Unity -projectpath \/home\/aamato\/Documents\/MARL\/UnityPetZoo\/sample-unity-project -useHub -hubIPC -cloudEnvironment production","communication_protocol_version":"1.5.0","com.unity.ml-agents_version":"3.0.0-exp.1","scene_name":"Connect2Points","end_time_seconds":"1702495644"}}
+\ No newline at end of file
+diff --git a/sample-unity-project/Assets/Scripts/CommEnv/DroneAgent.cs b/sample-unity-project/Assets/Scripts/CommEnv/DroneAgent.cs
+index 9609478..021d131 100644
+--- a/sample-unity-project/Assets/Scripts/CommEnv/DroneAgent.cs
++++ b/sample-unity-project/Assets/Scripts/CommEnv/DroneAgent.cs
+@@ -21,7 +21,7 @@ namespace CommEnv
+         {
+             base.Awake();
+             GameManager.Instance.RegisterAgent(this.transform.gameObject);
+-            
++            MaxStep = 100;
+         }
+ 
+         private void OnCollisionEnter(Collision other)
+@@ -66,14 +66,11 @@ namespace CommEnv
+             {
+                 sensor.AddObservation(a.transform.position);
+             }
+-
+         }
+ 
+         public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
+         {
+             base.WriteDiscreteActionMask(actionMask);
+-
+-           
+             
+             if (Math.Abs(this.transform.position.x - 9) < TOLERANCE)
+             {
+@@ -102,11 +99,17 @@ namespace CommEnv
+ 
+             var isActionValid = ValidateAction(action);
+             
+-            if(isActionValid)
++            if(!isActionValid)
++                AddReward(-10f);
++            else
++            {
+                 PerformAction(action);
++            }
+             
+             ComputeReward();
+             
++            print($"Agent: {transform.name} - Current step {StepCount}/{MaxStep} - Reward: {GetCumulativeReward()}");
++            
+             if (AreBaseStationsConnected())
+             {
+                 GameManager.Instance.Reset();
+@@ -170,17 +173,14 @@ namespace CommEnv
+                     break;
+             }
+         }
+-
+-        private int oldReward = 0;
++        
+         // function to compute reward
+         private void ComputeReward()
+         {   
+             _numOfConnections = GameManager.Instance.GetAgentDegree(this.transform.gameObject);
+ 
+             var totalReward = _numOfConnections * 5 + (AreBaseStationsConnected() ? 100 : 0);
+-            if(transform.name == "Drone1" && oldReward != totalReward)
+-                Debug.Log("Total reward: " + totalReward);
+-            SetReward(totalReward);
++            AddReward(totalReward);
+         }
+ 
+         private bool AreBaseStationsConnected()
+@@ -191,7 +191,6 @@ namespace CommEnv
+         public override void OnEpisodeBegin()
+         {
+             base.OnEpisodeBegin();
+-            
+             this.transform.position = startingPos;
+         }
+     }
+diff --git a/sample-unity-project/Assets/Scripts/CommEnv/GameManager.cs b/sample-unity-project/Assets/Scripts/CommEnv/GameManager.cs
+index 6a6bf24..e9edba9 100644
+--- a/sample-unity-project/Assets/Scripts/CommEnv/GameManager.cs
++++ b/sample-unity-project/Assets/Scripts/CommEnv/GameManager.cs
+@@ -93,7 +93,7 @@ namespace CommEnv
+         }
+ 
+         // Check if two agents are connected
+-        public bool AreNodesConnected(int index1, int index2)
++        private bool AreNodesConnected(int index1, int index2)
+         {
+             return _instance._graph.AreNodesConnected(index1, index2);
+         }

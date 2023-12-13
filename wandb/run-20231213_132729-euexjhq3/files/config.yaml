@@ -1,0 +1,100 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.13.11
+    code_path: code/python/comm_drones_runner.py
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.10.12
+    start_time: 1702495649.48442
+    t:
+      1:
+      - 1
+      - 55
+      2:
+      - 1
+      - 55
+      3:
+      - 13
+      - 16
+      - 23
+      - 35
+      4: 3.10.12
+      5: 0.13.11
+      8:
+      - 5
+batch_size:
+  desc: null
+  value: 128
+buffer_size:
+  desc: null
+  value: 10000
+capture_video:
+  desc: null
+  value: false
+cuda:
+  desc: null
+  value: true
+end_e:
+  desc: null
+  value: 0.05
+exp_name:
+  desc: null
+  value: dqn_comm_drones
+exploration_fraction:
+  desc: null
+  value: 0.5
+gamma:
+  desc: null
+  value: 0.99
+hf_entity:
+  desc: null
+  value: ''
+learning_rate:
+  desc: null
+  value: 0.00025
+learning_starts:
+  desc: null
+  value: 10000
+num_envs:
+  desc: null
+  value: 1
+run_name:
+  desc: null
+  value: dqn_comm_drones
+save_model:
+  desc: null
+  value: true
+seed:
+  desc: null
+  value: 1
+start_e:
+  desc: null
+  value: 1
+target_network_frequency:
+  desc: null
+  value: 500
+tau:
+  desc: null
+  value: 1.0
+torch_deterministic:
+  desc: null
+  value: true
+total_timesteps:
+  desc: null
+  value: 500000
+track:
+  desc: null
+  value: false
+train_frequency:
+  desc: null
+  value: 10
+upload_model:
+  desc: null
+  value: false
+wandb_project_name:
+  desc: null
+  value: commAgents

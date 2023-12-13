@@ -1,0 +1,125 @@
+{
+    "os": "Linux-6.2.0-37-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "heartbeatAt": "2023-12-13T19:27:30.004829",
+    "startedAt": "2023-12-13T19:27:29.479627",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/aamato/Documents/MARL/UnityPetZoo/python/comm_drones_runner.py",
+    "codePath": "python/comm_drones_runner.py",
+    "git": {
+        "remote": "git@github.com:aamatodev/UnityCommDrones.git",
+        "commit": "70d6ea741012681cb685ecbe1644065a81079e6f"
+    },
+    "email": "aamato@ihmc.org",
+    "root": "/home/aamato/Documents/MARL/UnityPetZoo",
+    "host": "nomads-Blade-15",
+    "username": "aamato",
+    "executable": "/home/aamato/anaconda3/envs/unitypetzoo/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 4071.9835,
+        "min": 800.0,
+        "max": 5100.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 4107.482,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4086.058,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4019.261,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3904.768,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4110.527,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3999.193,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4099.031,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3994.628,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3906.722,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4013.257,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3911.122,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3938.988,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4013.521,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4048.945,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3917.507,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3949.09,
+            "min": 800.0,
+            "max": 5100.0
+        }
+    ],
+    "disk": {
+        "total": 508.8124771118164,
+        "used": 123.29980087280273
+    },
+    "gpu": "NVIDIA GeForce RTX 3080 Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3080 Laptop GPU",
+            "memory_total": 8589934592
+        }
+    ],
+    "memory": {
+        "total": 31.11670684814453
+    }
+}

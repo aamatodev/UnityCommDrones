@@ -8,7 +8,10 @@ from torch import nn, optim
 from cleanrl_utils.buffers import ReplayBuffer
 from python.env.unity_env import DronesUnityParallelEnv
 from python.utils.args import Args
+from python.utils.logger import Logger
 from python.utils.utlis import Utils
+
+import torch.nn.functional as F
 
 
 class QNetwork(nn.Module):
@@ -34,6 +37,9 @@ class DronesDQN:
         self.device = device
         self.args = args
         self.log_to_wandb = log_to_wandb
+
+        if self.log_to_wandb:
+            self.logger = Logger(args)
 
     def train(self):
         if self.device is None:
@@ -78,7 +84,7 @@ class DronesDQN:
                 )
             )
 
-        self.env.reset()
+        obs, rewards, dones, infos = self.env.reset()
 
         for global_steps in range(self.args.total_timesteps):
 
@@ -88,32 +94,68 @@ class DronesDQN:
             actions = []
             for agent_id in range(self.num_agents):
                 if np.random.random() < epsilon:
-                    action = np.array(
-                        [self.env.get_action_space().sample() for _ in range(self.env.get_num_of_agents())])
+                    action = self.env.get_action_space().sample()
                 else:
-                    q_values = policies["policies"][0](torch.Tensor(self.env.get_observation_space()).to(self.device))
-                    action = torch.argmax(q_values, dim=1).cpu().numpy()
+                    q_values = policies["policies"][agent_id](torch.Tensor(obs[0][agent_id]).to(self.device))
+                    action = torch.argmax(q_values).cpu().numpy()
                 actions.append([action])
 
             # TRY NOT TO MODIFY: execute the game and log data.
-            obs, rewards, dones, infos = self.env.step(actions)
+            next_obs, rewards, dones, infos = self.env.step(actions)
 
             for idx in range(self.num_agents):
-                replay_buffers["replay_buffer"][idx].add(obs=self.env.get_observation_space()[idx],
-                                                         next_obs=obs[idx], action=actions[idx],
+                replay_buffers["replay_buffer"][idx].add(obs=obs[0][idx],
+                                                         next_obs=next_obs[0][idx], action=actions[idx],
                                                          reward=rewards[idx], done=dones[idx])
+            obs = next_obs
 
-                if replay_buffers["replay_buffer"][idx].is_full():
-                    # Training the network
-                    obs, next_obs, actions, rewards, dones = replay_buffers["replay_buffer"][idx].sample(
-                        self.args.batch_size)
+            # ALGO LOGIC: training.
+            if global_steps > self.args.learning_starts:
 
-                    q_values = policies["policies"][idx](obs).gather(1, actions.unsqueeze(1)).squeeze(1)
-                    next_q_values = policies["target_network"][idx](next_obs).max(1)[0]
-                    expected_q_values = rewards + (self.args.gamma * next_q_values * (1 - dones))
+                if global_steps % self.args.train_frequency == 0:
 
-                    loss = nn.MSELoss()(q_values, expected_q_values)
+                    for idx in range(self.num_agents):
+                        data = replay_buffers["replay_buffer"][idx].sample(self.args.batch_size)
+                        with (torch.no_grad()):
+                            target_max, _ = policies["target_network"][idx](
+                                data.next_observations
+                            ).max(dim=1)
 
-                    policies["optimizers"][idx].zero_grad()
-                    loss.backward()
-                    policies["optimizers"][idx].step()
+                            td_target = data.rewards.flatten() + self.args.gamma * target_max * (
+                                        1 - data.dones.flatten())
+
+                        old_val = policies["policies"][idx](
+                            data.observations
+                        ).gather(1, data.actions).squeeze()
+
+                        loss = F.mse_loss(td_target, old_val)
+
+                        if self.log_to_wandb:
+                            if global_steps % 100 == 0:
+                                self.logger.log(f"charts/agent-{idx}/loss", loss, global_steps)
+                                self.logger.log(f"charts/agent-{idx}/epsilon", epsilon, global_steps)
+                                self.logger.log(f"charts/agent-{idx}/rewards", rewards[idx], global_steps)
+
+                        # optimize the model
+                        policies["optimizers"][idx].zero_grad()
+                        loss.backward()
+                        policies["optimizers"][idx].step()
+
+                        # update target network
+                        if global_steps % self.args.target_network_frequency == 0:
+                            for target_network_param, q_network_param in zip(
+                                    policies["target_network"][idx].
+                                            parameters(),
+                                    policies["policies"][idx].
+                                            parameters()):
+                                target_network_param.data.copy_(
+                                    self.args.tau * q_network_param.data + (
+                                                1.0 - self.args.tau) * target_network_param.data
+                                )
+
+        # save the model
+        if self.args.save_model:
+            for a in range(self.env.get_num_of_agents()):
+                model_path = f"runs/{self.args.run_name}/{self.args.exp_name}-{a}.cleanrl_model"
+                torch.save(policies["policies"][a].state_dict(), model_path)
+                print(f"model saved to {model_path}")

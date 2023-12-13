@@ -93,7 +93,7 @@ namespace CommEnv
         }
 
         // Check if two agents are connected
-        public bool AreNodesConnected(int index1, int index2)
+        private bool AreNodesConnected(int index1, int index2)
         {
             return _instance._graph.AreNodesConnected(index1, index2);
         }

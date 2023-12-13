@@ -1,0 +1,23 @@
+Traceback (most recent call last):
+  File "/home/aamato/Documents/MARL/UnityPetZoo/python/comm_drones_runner.py", line 31, in <module>
+    dronesDQN.train()
+  File "/home/aamato/Documents/MARL/UnityPetZoo/python/scripts/dqn_comm_drones.py", line 104, in train
+    next_obs, rewards, dones, infos = self.env.step(actions)
+  File "/home/aamato/Documents/MARL/UnityPetZoo/python/env/unity_env.py", line 60, in step
+    self.unityEnv.step()
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/site-packages/mlagents_envs/timers.py", line 305, in wrapped
+    return func(*args, **kwargs)
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/site-packages/mlagents_envs/environment.py", line 348, in step
+    outputs = self._communicator.exchange(step_input, self._poll_process)
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/site-packages/mlagents_envs/rpc_communicator.py", line 142, in exchange
+    self.poll_for_timeout(poll_callback)
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/site-packages/mlagents_envs/rpc_communicator.py", line 106, in poll_for_timeout
+    if self.unity_to_external.parent_conn.poll(callback_timeout_wait):
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/multiprocessing/connection.py", line 257, in poll
+    return self._poll(timeout)
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/multiprocessing/connection.py", line 424, in _poll
+    r = wait([self], timeout)
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/multiprocessing/connection.py", line 931, in wait
+    ready = selector.select(timeout)
+  File "/home/aamato/anaconda3/envs/unitypetzoo/lib/python3.10/selectors.py", line 416, in select
+    fd_event_list = self._selector.poll(timeout)

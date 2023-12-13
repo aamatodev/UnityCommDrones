@@ -1,0 +1,27 @@
+2023-12-13 13:27:29,480 INFO    MainThread:44368 [wandb_setup.py:_flush():76] Configure stats pid to 44368
+2023-12-13 13:27:29,480 INFO    MainThread:44368 [wandb_setup.py:_flush():76] Loading settings from /home/aamato/.config/wandb/settings
+2023-12-13 13:27:29,480 INFO    MainThread:44368 [wandb_setup.py:_flush():76] Loading settings from /home/aamato/Documents/MARL/UnityPetZoo/wandb/settings
+2023-12-13 13:27:29,480 INFO    MainThread:44368 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2023-12-13 13:27:29,480 INFO    MainThread:44368 [wandb_setup.py:_flush():76] Applying setup settings: {'_disable_service': False}
+2023-12-13 13:27:29,480 INFO    MainThread:44368 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'python/comm_drones_runner.py', 'program': '/home/aamato/Documents/MARL/UnityPetZoo/python/comm_drones_runner.py'}
+2023-12-13 13:27:29,481 INFO    MainThread:44368 [wandb_init.py:_log_setup():506] Logging user logs to /home/aamato/Documents/MARL/UnityPetZoo/wandb/run-20231213_132729-euexjhq3/logs/debug.log
+2023-12-13 13:27:29,481 INFO    MainThread:44368 [wandb_init.py:_log_setup():507] Logging internal logs to /home/aamato/Documents/MARL/UnityPetZoo/wandb/run-20231213_132729-euexjhq3/logs/debug-internal.log
+2023-12-13 13:27:29,481 INFO    MainThread:44368 [wandb_init.py:init():546] calling init triggers
+2023-12-13 13:27:29,481 INFO    MainThread:44368 [wandb_init.py:init():552] wandb.init called with sweep_config: {}
+config: {'exp_name': 'dqn_comm_drones', 'seed': 1, 'torch_deterministic': True, 'cuda': True, 'track': False, 'wandb_project_name': 'commAgents', 'capture_video': False, 'save_model': True, 'upload_model': False, 'hf_entity': '', 'total_timesteps': 500000, 'learning_rate': 0.00025, 'num_envs': 1, 'buffer_size': 10000, 'gamma': 0.99, 'tau': 1.0, 'target_network_frequency': 500, 'batch_size': 128, 'start_e': 1, 'end_e': 0.05, 'exploration_fraction': 0.5, 'learning_starts': 10000, 'train_frequency': 10, 'run_name': 'dqn_comm_drones'}
+2023-12-13 13:27:29,481 INFO    MainThread:44368 [wandb_init.py:init():602] starting backend
+2023-12-13 13:27:29,481 INFO    MainThread:44368 [wandb_init.py:init():606] setting up manager
+2023-12-13 13:27:29,483 INFO    MainThread:44368 [backend.py:_multiprocessing_setup():106] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2023-12-13 13:27:29,484 INFO    MainThread:44368 [wandb_init.py:init():613] backend started and connected
+2023-12-13 13:27:29,488 INFO    MainThread:44368 [wandb_init.py:init():701] updated telemetry
+2023-12-13 13:27:29,491 INFO    MainThread:44368 [wandb_init.py:init():741] communicating run to backend with 60.0 second timeout
+2023-12-13 13:27:29,859 INFO    MainThread:44368 [wandb_run.py:_on_init():2131] communicating current version
+2023-12-13 13:27:29,980 INFO    MainThread:44368 [wandb_run.py:_on_init():2140] got version response upgrade_message: "wandb version 0.16.1 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2023-12-13 13:27:29,980 INFO    MainThread:44368 [wandb_init.py:init():789] starting run threads in backend
+2023-12-13 13:27:32,047 INFO    MainThread:44368 [wandb_run.py:_console_start():2112] atexit reg
+2023-12-13 13:27:32,048 INFO    MainThread:44368 [wandb_run.py:_redirect():1967] redirect: SettingsConsole.WRAP_RAW
+2023-12-13 13:27:32,048 INFO    MainThread:44368 [wandb_run.py:_redirect():2032] Wrapping output streams.
+2023-12-13 13:27:32,048 INFO    MainThread:44368 [wandb_run.py:_redirect():2057] Redirects installed.
+2023-12-13 13:27:32,048 INFO    MainThread:44368 [wandb_init.py:init():831] run started, returning control to user process
+2023-12-13 13:27:32,048 INFO    MainThread:44368 [wandb_run.py:_tensorboard_callback():1394] tensorboard callback: runs/dqn_comm_drones, True
