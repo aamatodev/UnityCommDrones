@@ -1,3 +1,5 @@
 .idea
 /python/runs
 /python/wandb
+/wandb/
+/runs/

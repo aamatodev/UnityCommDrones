@@ -21,7 +21,7 @@ namespace CommEnv
         {
             base.Awake();
             GameManager.Instance.RegisterAgent(this.transform.gameObject);
-            
+            MaxStep = 0;
         }
 
         private void OnCollisionEnter(Collision other)
@@ -66,14 +66,11 @@ namespace CommEnv
             {
                 sensor.AddObservation(a.transform.position);
             }
-
         }
 
         public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
         {
             base.WriteDiscreteActionMask(actionMask);
-
-           
             
             if (Math.Abs(this.transform.position.x - 9) < TOLERANCE)
             {
@@ -102,10 +99,16 @@ namespace CommEnv
 
             var isActionValid = ValidateAction(action);
             
-            if(isActionValid)
+            if(!isActionValid)
+                AddReward(-10f);
+            else
+            {
                 PerformAction(action);
+            }
             
             ComputeReward();
+            
+           // print($"Agent: {transform.name} - Current step {StepCount}/{MaxStep} - Reward: {GetCumulativeReward()}");
             
             if (AreBaseStationsConnected())
             {
@@ -170,17 +173,15 @@ namespace CommEnv
                     break;
             }
         }
-
-        private int oldReward = 0;
+        
         // function to compute reward
         private void ComputeReward()
         {   
-            _numOfConnections = GameManager.Instance.GetAgentDegree(this.transform.gameObject);
-
+            _numOfConnections = GameManager.Instance.getGloblDegree();
+            
             var totalReward = _numOfConnections * 5 + (AreBaseStationsConnected() ? 100 : 0);
-            if(transform.name == "Drone1" && oldReward != totalReward)
-                Debug.Log("Total reward: " + totalReward);
-            SetReward(totalReward);
+            //Debug.Log($"total reward: {totalReward}");
+            AddReward(totalReward);
         }
 
         private bool AreBaseStationsConnected()
@@ -191,7 +192,6 @@ namespace CommEnv
         public override void OnEpisodeBegin()
         {
             base.OnEpisodeBegin();
-            
             this.transform.position = startingPos;
         }
     }
