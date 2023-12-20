@@ -10,6 +10,11 @@ namespace CommEnv.Utils
         {
             adjacencyList = new Dictionary<int, List<int>>();
         }
+        
+        public List<int> GetNodes()
+        {
+            return new List<int>(adjacencyList.Keys);
+        }
 
         // Add an edge to the graph
         public void AddEdge(int source, int destination)

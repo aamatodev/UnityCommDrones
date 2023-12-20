@@ -91,6 +91,23 @@ namespace CommEnv
             var index = _instance._agents[g];
             return _instance._graph.GetNodeDegree(index);
         }
+        
+        public int getGloblDegree()
+        {
+            var numberOfConnections = 0;
+            
+            foreach (var node in _instance._graph.GetNodes())
+            {
+                foreach (var target in _instance._graph.GetNodes())
+                {
+                    if(target != node)
+                        if(_instance._graph.AreNodesConnected(node, target))
+                            numberOfConnections++;
+                }
+            }
+            
+            return numberOfConnections;
+        }
 
         // Check if two agents are connected
         private bool AreNodesConnected(int index1, int index2)
