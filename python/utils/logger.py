@@ -11,6 +11,7 @@ import wandb
 
 class Logger:
     def __init__(self, args: Args):
+        logging.basicConfig(level=logging.DEBUG)
 
         wandb.init(
             project=args.wandb_project_name,

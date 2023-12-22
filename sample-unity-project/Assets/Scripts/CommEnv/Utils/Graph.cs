@@ -88,5 +88,67 @@ namespace CommEnv.Utils
 
             return false;
         }
+        
+        private List<int> DFS(int current, HashSet<int> visited)
+        {
+            List<int> cluster = new List<int>();
+            Stack<int> stack = new Stack<int>();
+            stack.Push(current);
+
+            while (stack.Count > 0)
+            {
+                int currentNode = stack.Pop();
+
+                if (!visited.Contains(currentNode))
+                {
+                    visited.Add(currentNode);
+                    cluster.Add(currentNode);
+
+                    if (adjacencyList.ContainsKey(currentNode))
+                    {
+                        foreach (var neighbor in adjacencyList[currentNode])
+                        {
+                            if (!visited.Contains(neighbor))
+                            {
+                                stack.Push(neighbor);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return cluster;
+        }
+        
+        // Find all clusters in the graph
+        public List<List<int>> FindClusters()
+        {
+            HashSet<int> visited = new HashSet<int>();
+            List<List<int>> clusters = new List<List<int>>();
+
+            foreach (var node in adjacencyList.Keys)
+            {
+                if (!visited.Contains(node))
+                {
+                    List<int> cluster = DFS(node, visited);
+                    clusters.Add(cluster);
+                }
+            }
+
+            // Check if all nodes are not connected, create individual clusters for unvisited nodes
+            if (clusters.Count == 0)
+            {
+                foreach (var node in adjacencyList.Keys)
+                {
+                    if (!visited.Contains(node))
+                    {
+                        clusters.Add(new List<int> { node });
+                    }
+                }
+            }
+
+            return clusters;
+        }
     }
+    
 }

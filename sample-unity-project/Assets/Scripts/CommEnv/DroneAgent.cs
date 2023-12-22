@@ -21,7 +21,7 @@ namespace CommEnv
         {
             base.Awake();
             GameManager.Instance.RegisterAgent(this.transform.gameObject);
-            MaxStep = 0;
+            MaxStep = 300;
         }
 
         private void OnCollisionEnter(Collision other)
@@ -178,10 +178,45 @@ namespace CommEnv
         private void ComputeReward()
         {   
             _numOfConnections = GameManager.Instance.getGloblDegree();
+
+            var clusters = GameManager.Instance.GetClusters();
+            var partialReward = 0f;
+            foreach (var cluster in clusters)
+            {
+                //find the closest gameobject in the cluster
+                var minDin = float.MaxValue;
+                foreach (var go in cluster)
+                {
+                    var dist = Vector3.Distance(this.transform.position, go.transform.position) - 2.5f;
+                    if(minDin > dist)
+                        minDin = dist;
+                }
+
+                if (minDin <= 0)
+                    partialReward += 1;
+                else
+                {
+                    partialReward += 1 / minDin;
+                }
+            }
             
-            var totalReward = _numOfConnections * 5 + (AreBaseStationsConnected() ? 100 : 0);
-            //Debug.Log($"total reward: {totalReward}");
-            AddReward(totalReward);
+            partialReward /= clusters.Count;
+            
+            float totalReward = 0;
+            
+            if (AreBaseStationsConnected())
+            {
+                totalReward = 1;
+            }
+            else
+            {
+                totalReward = _numOfConnections/(GameManager.Instance.GetNumOfAgents() * (GameManager.Instance.GetNumOfAgents() -1 ))/2 * 0.20f + partialReward * 0.80f;
+            }
+            
+            SetReward(totalReward);
+            if(this.transform.name == "Drone1")
+                Debug.Log($"Reward Drone1: {totalReward}");
+            
         }
 
         private bool AreBaseStationsConnected()

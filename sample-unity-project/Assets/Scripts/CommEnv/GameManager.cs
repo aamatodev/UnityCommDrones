@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CommEnv.Utils;
 using UnityEngine;
 
@@ -13,7 +14,7 @@ namespace CommEnv
         
         // Connection graph
         private Graph _graph = new Graph();
-        private Dictionary<GameObject, int> _agents = new Dictionary<GameObject, int>();
+        private Dictionary<int, GameObject> _agents = new Dictionary<int, GameObject>();
         
         // Public property to access the singleton instance
         private static GameManager _instance;
@@ -62,14 +63,15 @@ namespace CommEnv
         public void RegisterAgent(GameObject g)
         {
             var index = _instance._agents.Count;
-            _instance._agents.Add(g, index);
+            _instance._agents.Add(index, g);
+            _graph.AddEdge(index, index);
         }
         
         // Register a connection between two agents
         public void RegisterConnection(GameObject g1, GameObject g2)
         {
-            var index1 = _instance._agents[g1];
-            var index2 = _instance._agents[g2];
+            var index1 = _agents.FirstOrDefault(x => x.Value == g1).Key;
+            var index2 = _agents.FirstOrDefault(x => x.Value == g2).Key;
             
             if(!AreNodesConnected(index1, index2) || !AreNodesConnected(index2, index1) )   
                 _instance._graph.AddEdge(index1, index2);
@@ -78,8 +80,9 @@ namespace CommEnv
         // Remove a connection between two agents
         public void RemoveConnection(GameObject g1, GameObject g2)
         {
-            var index1 = _instance._agents[g1];
-            var index2 = _instance._agents[g2];
+            var index1 = _agents.FirstOrDefault(x => x.Value == g1).Key;
+            var index2 = _agents.FirstOrDefault(x => x.Value == g2).Key;
+
             
             if(AreNodesConnected(index1, index2) || AreNodesConnected(index2, index1) )   
                 _instance._graph.RemoveEdge(index1, index2);
@@ -88,7 +91,7 @@ namespace CommEnv
         // Get the degree of an agent
         public int GetAgentDegree(GameObject g)
         {
-            var index = _instance._agents[g];
+            var index = _agents.FirstOrDefault(x => x.Value == g).Key;
             return _instance._graph.GetNodeDegree(index);
         }
         
@@ -118,21 +121,44 @@ namespace CommEnv
         // Check if the two main base are connected
         public bool AreBaseStationConnected()
         {
-            var base1Index = _instance._agents[baseStation1];
-            var base2Index = _instance._agents[baseStation2];
+            var index1 = _agents.FirstOrDefault(x => x.Value == baseStation1).Key;
+            var index2 = _agents.FirstOrDefault(x => x.Value == baseStation2).Key;
             
-            return _instance._graph.AreNodesConnected(base1Index, base2Index);
+            return _instance._graph.AreNodesConnected(index1, index2);
         }
 
         public void Reset()
         {
             foreach (var agent in _agents)
             {
-                if (agent.Key.TryGetComponent(out DroneAgent a))
+                if (agent.Value.TryGetComponent(out DroneAgent a))
                 {
-                    a.EndEpisode();
+                   // a.EndEpisode();
                 }
             }
+        }
+
+        public List<List<GameObject>> GetClusters()
+        {
+            var clusters = _graph.FindClusters();
+            var gameobjectsClusterList = new List<List<GameObject>>();
+            foreach (var cluster in clusters)
+            {
+                List<GameObject> g = new List<GameObject>();
+                
+                foreach (var index in cluster)
+                {
+                    g.Add(_agents[index]);
+                }
+                gameobjectsClusterList.Add(g);
+            }
+
+            return gameobjectsClusterList;
+        }
+
+        public int GetNumOfAgents()
+        {
+            return _agents.Count;
         }
 
         public List<GameObject> GetRegisteredAgents()
@@ -141,7 +167,7 @@ namespace CommEnv
             
             foreach (var agent in _agents)
             {
-                agents.Add(agent.Key);
+                agents.Add(agent.Value);
             }
 
             return agents;
